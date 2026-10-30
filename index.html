@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>プレイカルテ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: one narrow column of sticker-like cards; sticky step bar on top, sticky action bar at bottom */
+:root{
+  --bg:#FFF4D2; --dot:#FFE08A; --ink:#22173A; --muted:#6B5F80; --card:#FFFFFF; --line:#22173A;
+  --pink:#FF4F9A; --mint:#22C99A; --sky:#3FA9F5; --sun:#FFC23D; --gray:#B9B0C7;
+  --pink-soft:#FFE0EE; --mint-soft:#D6F7EC; --sky-soft:#DCEFFF; --sun-soft:#FFF0C7; --gray-soft:#EEEAF3;
+  --display:"Dela Gothic One","M PLUS Rounded 1c","Hiragino Sans",sans-serif;
+  --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1B1430; --dot:#2A2046; --ink:#FFF4E6; --muted:#BDB1D6; --card:#2A2045; --line:#0C0818;
+  --pink:#FF6AAB; --mint:#3BDDB0; --sky:#5DB8FF; --sun:#FFCB55; --gray:#7D7299;
+  --pink-soft:#4A2140; --mint-soft:#163F3A; --sky-soft:#1C3352; --sun-soft:#463A1C; --gray-soft:#3A3157; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B1430; --dot:#2A2046; --ink:#FFF4E6; --muted:#BDB1D6; --card:#2A2045; --line:#0C0818;
+  --pink:#FF6AAB; --mint:#3BDDB0; --sky:#5DB8FF; --sun:#FFCB55; --gray:#7D7299;
+  --pink-soft:#4A2140; --mint-soft:#163F3A; --sky-soft:#1C3352; --sun-soft:#463A1C; --gray-soft:#3A3157; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);background-image:radial-gradient(var(--dot) 2px,transparent 2.5px);background-size:22px 22px;color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6;min-height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 120px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;line-height:1.25}
+p{margin:0}
+.card{background:var(--card);border:2.5px solid var(--line);border-radius:18px;box-shadow:4px 4px 0 var(--line);padding:18px}
+.muted{color:var(--muted);font-size:13px}
+.logo{font-family:var(--display);font-size:clamp(40px,11vw,64px);line-height:1;letter-spacing:.02em}
+.logo span{color:var(--pink);display:inline-block;transform:rotate(-4deg)}
+.hero{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.tag{display:inline-block;font-weight:800;font-size:12px;letter-spacing:.08em;background:var(--sun);color:#22173A;border:2px solid var(--line);border-radius:999px;padding:2px 10px;align-self:flex-start}
+label.field{display:flex;flex-direction:column;gap:6px;font-weight:700}
+input[type=text],textarea{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+textarea{resize:vertical;min-height:44px}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.btn{font:inherit;font-weight:800;cursor:pointer;border:2.5px solid var(--line);border-radius:999px;padding:12px 20px;background:var(--card);color:var(--ink);box-shadow:3px 3px 0 var(--line);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+.btn.primary{background:var(--pink);color:#fff}
+.btn.mint{background:var(--mint);color:#12302A}
+.btn.small{padding:7px 14px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.legend{display:flex;gap:8px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700}
+/* step bar */
+.stepbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;display:flex;flex-direction:column;gap:8px;border-bottom:2px dashed var(--gray)}
+.progress{height:12px;border:2px solid var(--line);border-radius:999px;background:var(--card);overflow:hidden}
+.progress i{display:block;height:100%;background:repeating-linear-gradient(45deg,var(--pink) 0 10px,#ff7db6 10px 20px);transition:width .3s}
+.stepchips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.stepchips button{flex:none;font:inherit;font-size:12px;font-weight:700;border:2px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--card);color:var(--ink);cursor:pointer;white-space:nowrap}
+.stepchips button.on{background:var(--ink);color:var(--bg)}
+.stepchips button.done{background:var(--mint-soft)}
+.stephead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.stephead h2{font-size:clamp(24px,6vw,32px)}
+.count{font-weight:800;font-variant-numeric:tabular-nums;color:var(--muted)}
+/* rating items */
+.items{display:flex;flex-direction:column;gap:12px}
+.item{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.item .name{font-weight:800;font-size:16px}
+.dirs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:520px){.dirs{grid-template-columns:1fr}}
+.dir{display:flex;align-items:center;gap:8px;min-width:0}
+.dir b{font-size:12px;width:44px;flex:none;color:var(--muted)}
+.chips{display:flex;gap:5px}
+.chip{width:36px;height:36px;border-radius:50%;border:2px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:800;font-size:16px;cursor:pointer;display:grid;place-items:center;transition:transform .1s}
+.chip:hover{transform:scale(1.08)}
+.chip.on{transform:scale(1.12) rotate(-6deg);box-shadow:2px 2px 0 var(--line)}
+.v5.on,.dot.v5{background:var(--pink);color:#fff}
+.v4.on,.dot.v4{background:var(--mint);color:#12302A}
+.v3.on,.dot.v3{background:var(--sun);color:#22173A}
+.v2.on,.dot.v2{background:var(--sky);color:#fff}
+.v1.on,.dot.v1{background:var(--gray);color:#22173A}
+.dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:inline-grid;place-items:center;font-weight:800;font-size:12px;flex:none}
+.dot.v0{background:var(--card);color:var(--muted)}
+.stepbar .legend{gap:4px 12px}.stepbar .legend span{font-size:12px;gap:4px}.stepbar .legend .dot{width:20px;height:20px;font-size:11px}
+.fx{position:fixed;z-index:50;pointer-events:none;font-style:normal;font-weight:800;line-height:1;-webkit-text-stroke:1px var(--line)}
+.fx-ring{position:fixed;z-index:49;pointer-events:none;width:40px;height:40px;border-radius:50%;border:3px solid var(--pink)}
+.note{background:var(--sky-soft);border:2px dashed var(--sky);border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700}
+.fields{display:flex;flex-direction:column;gap:14px}
+.field.sel{display:flex;flex-direction:column;gap:6px;font-weight:700}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{font:inherit;font-size:14px;font-weight:700;cursor:pointer;border:2px solid var(--line);border-radius:999px;padding:6px 14px;background:var(--card);color:var(--ink);transition:transform .1s}
+.opt.on{background:var(--pink);color:#fff;transform:rotate(-2deg);box-shadow:2px 2px 0 var(--line)}
+.field.sel input{padding:6px 10px;font-size:14px}
+/* action bar */
+.actionbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bg);border-top:2.5px solid var(--line);padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.actionbar .inner{max-width:720px;margin:0 auto;display:flex;justify-content:space-between;gap:10px}
+/* results */
+.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(3,1fr)}}
+.tile{border:2px solid var(--line);border-radius:14px;padding:10px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.tile strong{font-family:var(--display);font-weight:400;font-size:28px;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile span{font-size:12px;font-weight:800}
+.b-love{background:var(--pink-soft)}.b-ok{background:var(--mint-soft)}.b-try{background:var(--sky-soft)}.b-talk{background:var(--sun-soft)}.b-ng{background:var(--gray-soft)}
+.bucket{display:flex;flex-direction:column;gap:10px}
+.bucket h3{font-size:20px;display:flex;align-items:center;gap:8px}
+.bucket h3 .pill{font-family:var(--body);font-size:12px;font-weight:800;border:2px solid var(--line);border-radius:999px;padding:1px 9px}
+.bucket .sub{font-size:13px;color:var(--muted)}
+.cat{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.06em;margin-top:4px}
+.ritem{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1.5px dashed var(--gray)}
+.ritem:last-child{border-bottom:0}
+.ritem .what{font-weight:800;flex:1 1 160px;min-width:0}
+.arrow{font-size:12px;font-weight:800;border:2px solid var(--line);border-radius:999px;padding:1px 9px;background:var(--bg);white-space:nowrap}
+.pair{display:flex;gap:4px;align-items:center}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1.5px dashed var(--gray);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:800}
+td.c{text-align:center;width:72px}
+textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;min-height:110px;word-break:break-all}
+.err{color:var(--pink);font-weight:800;font-size:13px}
+.ok{color:var(--mint);font-weight:800;font-size:13px}
+.empty{color:var(--muted);font-size:14px}
+.gm{background:#1B1430;background-image:radial-gradient(#2E2350 2px,transparent 2.5px);background-size:20px 20px;color:#FFF4E6;border:3px solid var(--line);border-radius:24px;box-shadow:5px 5px 0 var(--line);padding:18px 16px 16px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.gm-top{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:#BDB1D6;gap:10px}
+.gm-c{text-align:center}
+.gm-title{font-family:var(--display);font-size:44px;letter-spacing:.06em;color:#FFCB55;line-height:1}
+.gm-stars{font-size:20px;letter-spacing:6px;color:#FFCB55;margin-top:4px}.gm-stars span{color:#5A4E78}
+.gm-rankrow{display:flex;align-items:center;gap:16px;justify-content:center}
+.gm-rank{width:100px;height:100px;flex:none;border-radius:50%;background:#FF6AAB;border:4px solid #FFF4E6;display:grid;place-items:center;font-family:var(--display);font-size:60px;color:#22173A;transform:rotate(-8deg);transition:transform .5s cubic-bezier(.2,1.8,.4,1)}
+.gm-rank.pre{transform:scale(0) rotate(-40deg)}
+.gm-lab{font-size:12px;font-weight:800;color:#BDB1D6}
+.gm-pct{font-family:var(--display);font-size:46px;line-height:1;color:#3BDDB0;font-variant-numeric:tabular-nums}.gm-pct small{font-size:22px}
+.gm-msg{font-size:12px;font-weight:800;color:#FFCB55}
+.gm-lines{display:flex;flex-direction:column;gap:6px}
+.gm-ln{font:inherit;color:#FFF4E6;cursor:pointer;display:flex;align-items:center;gap:10px;background:#2A2045;border:2px solid #0C0818;border-radius:12px;padding:7px 12px;text-align:left;transition:opacity .35s,transform .35s cubic-bezier(.2,1.4,.4,1)}
+.gm-ln:hover{background:#352A57}
+.gm-ln.pre{opacity:0;transform:translateX(-24px)}
+.gm-k{font-family:var(--display);font-size:15px;width:100px;flex:none}
+.gm-j{font-size:12px;color:#BDB1D6;flex:1;min-width:0}
+.gm-n{font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums}
+.gm-top3{background:#2A2045;border:2px dashed #FF6AAB;border-radius:14px;padding:10px 12px}
+.gm-t3h{font-family:var(--display);font-size:13px;color:#FF6AAB;margin-bottom:6px}
+.gm-pl{display:inline-block;font-size:12px;font-weight:800;border:2px solid #0C0818;border-radius:999px;padding:3px 10px;background:#FF6AAB;color:#22173A;margin:0 4px 6px 0}
+.gm-new{font-size:12px;font-weight:800;color:#5DB8FF}
+.gm-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gm-b{font:inherit;font-weight:800;font-size:14px;border:2.5px solid #0C0818;border-radius:999px;padding:11px;background:#FFF4E6;color:#22173A;cursor:pointer;box-shadow:3px 3px 0 #0C0818}
+.gm-b.pk{background:#FF6AAB}
+.gm-b:active{transform:translate(3px,3px);box-shadow:none}
+.gm-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:24px}
+.gm-foot .ok{color:#3BDDB0}.gm-foot .muted{color:#BDB1D6}
+.gm-replay{font:inherit;font-size:12px;font-weight:800;color:#BDB1D6;background:none;border:0;cursor:pointer;text-decoration:underline;margin-left:auto}
+
+.restabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.restabs button{flex:none;font:inherit;font-weight:800;font-size:14px;border:2px solid var(--line);border-radius:999px;padding:6px 14px;background:var(--card);color:var(--ink);cursor:pointer}
+.restabs button.on{background:var(--ink);color:var(--bg)}
+button.tile{font:inherit;color:var(--ink);cursor:pointer;transition:transform .1s}
+.tile.on{border-width:3px;box-shadow:3px 3px 0 var(--line);transform:translateY(-2px)}
+.tile:not(.on){opacity:.75}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pi{display:inline-flex;align-items:baseline;gap:6px;border:2px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--card);font-weight:700;font-size:14px;line-height:1.4}
+button.pi{font:inherit;font-weight:700;font-size:14px;color:var(--ink);cursor:pointer;flex-wrap:wrap}
+.pi em{display:none;font-style:normal;font-size:12px;font-weight:800;align-items:center;gap:4px}
+.pi.open{background:var(--bg)}
+.pi.open em{display:inline-flex;flex-basis:100%}
+.pi em .dot{width:20px;height:20px;font-size:11px}
+.pi small{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap}
+.grp{display:flex;flex-direction:column;gap:8px}
+.grph{align-self:flex-start;font-weight:800;font-size:13px;border:2px solid var(--line);border-radius:999px;padding:2px 10px;display:flex;gap:6px}
+.h3{font-size:18px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;padding:9px 0;border-bottom:1.5px dashed var(--gray)}
+.cmp:last-child{border-bottom:0}
+.cmp.head{font-size:12px;font-weight:800;color:var(--muted);padding-top:0}
+.cmp .lab{grid-column:1/-1;font-size:12px;color:var(--muted);font-weight:800}
+.cmp .v{min-width:0;overflow-wrap:anywhere;font-weight:700}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.chip.on{transform:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+<div class="actionbar" id="bar" hidden><div class="inner" id="barInner"></div></div>
+
+<script>
+const R = [ // value, mark, label
+  [5,'◎','やりたい'],[4,'○','OK'],[3,'△','要相談'],[2,'？','興味あり'],[1,'×','NG']];
+const MARK = {0:'・',1:'×',2:'？',3:'△',4:'○',5:'◎'};
+
+const BASICS = [ // [id, label, options?] options = 選択式
+  ['position','ポジション',['タチ','ウケ','リバ','その他']],
+  ['role','今回やりたい役割',['タチ','ウケ','どちらでも','流れで決めたい']],
+  ['exp','経験量・慣れ具合',['初めて','数回だけ','それなりに','かなり慣れてる']],
+  ['test','直近の性病検査',['3か月以内','半年以内','1年以内','1年以上前','受けたことない']],
+  ['testdetail','検査の項目・結果で共有しておきたいこと'],
+  ['prep','PrEP',['服用中','服用していない','検討中']],
+  ['share','治療中のもの・共有しておきたいこと'],
+  ['condom','コンドーム',['必ず使う','相談して決めたい','使わなくていい']],
+  ['lotion','ローションの好み・アレルギー（ラテックス等）'],
+  ['health','持病・ケガ・体力面で配慮してほしいこと'],
+  ['notouch','触られたくない部位'],
+  ['marks','跡が残るのは',['NG','見えない場所ならOK','どこでもOK']],
+  ['drink','当日の飲酒',['飲まない','少し飲む','けっこう飲む']],
+  ['drugs','薬物・ED薬などの使用',['使わない','ED薬のみ','その他を使う']],
+  ['meal','食事は',['セックスの前','セックスの後','どちらでも','食事なし']],
+  ['after','あとの連絡（アフターケア）',['連絡を取り合いたい','どちらでも','その場限りがいい']]];
+const SAFE = [['sw_stop','中断（即やめる）の言葉'],['sw_pause','一時停止（ペースを落とす）の言葉'],['sw_sign','声が出せない時のサイン']];
+
+const RATE2 = [
+ {id:'kiss',title:'キス・愛撫',items:['キス','ディープキス','唾液交換','乳首責め','耳・首筋','脇舐め','足・足指舐め','全身リップ','手コキ','兜合わせ','素股']},
+ {id:'oral',title:'オーラル',items:['フェラ','玉舐め','シックスナイン','イラマチオ（喉奥）','口内射精','ごっくん','顔射・体にかける']},
+ {id:'anal',title:'アナル',items:['指入れ','前立腺責め','挿入（ゴムあり）','挿入（生）','中出し・種付け','トコロテン・メスイキ狙い','激しめ・掘く掘き','複数回・連続','拡張','フィスト']},
+ {id:'rim',title:'ケツ舐め・顔面系',items:['ケツ舐め（リミング）','舌を入れる','顔面騎乗','玉・ケツを顔に押し付ける']},
+ {id:'smell',title:'匂い',note:'この章だけ「する＝嗅ぐ」「される＝嗅がれる」です。',items:['体臭（全身）','脇の匂い','首筋・髪の匂い','足の匂い','汗をかいた後（運動後・仕事終わり）','風呂に入らずそのまま','香水・制汗剤なしの素の匂い','着用済みパンツの匂い','着用済みケツ割れ・競パンの匂い','着用済み靴下・靴の匂い','下着越しに股間を嗅ぐ','竿・亀頭の匂い','玉・蒸れた股の匂い','ケツ・アナルの匂い','洗っていない局部（恥垢含む）','精液の匂い','口・息の匂い']},
+ {id:'uri',title:'尿道・おしっこ・スカ',items:['尿道プレイ（ブジー等）','亀頭責め','潮吹き','放尿を見る・見せる','尿をかける・かけられる','飲尿','浣腸','スカトロ','おならをする・される','おならを嗅ぐ・嗅がれる']},
+ {id:'toy',title:'道具',items:['ディルド','バイブ・ローター','電マ','エネマグラ・アナルプラグ','オナホ','コックリング','貞操帯']},
+ {id:'sm',title:'SM・支配と服従',items:['言葉責め','罵倒・辱め','命令・服従','目隠し','拘束（手錠・縄・ベルト）','首輪・リード','スパンキング','乳首クリップ','低温ろうそく','寸止め・射精管理','放置','首絞め（高リスク・要十分な相談）']},
+ {id:'fetish',title:'フェチ・衣装',items:['唾液・精液など体液全般','汗・蒸れ','体毛・髭','下着姿・下着越しに触る','競パン・ケツ割れ・ジョック','作業着・スーツ・コスプレ','ラバー・レザー','着衣のまま','着衣破り・破り']},
+ {id:'situ',title:'シチュエーション',items:['部屋を暗くする','明るいまま','風呂・シャワーで','鏡の前で','ロールプレイ（上司と部下、初対面設定など）','レイプ風プレイ（合意の上で）','複数人・3P','他人に見られる・見せる','泣く・身悶えるなど反応を見せる','野外・露出プレイ']},
+];
+const SHOOT_RULES = [
+  ['kind','撮影の可否（写真／動画／両方／なし）'],['who','撮る側・撮られる側どっちがいい？'],['face','顔出し（あり／なし／ぼかしならOK）'],
+  ['marks','タトゥー・ほくろなど特徴の写り込み'],['voice','声・会話の録音'],['camera','カメラ目線・実況'],['gear','使う機材（スマホのみ／固定カメラなど）'],
+  ['store','保存先（誰の端末・クラウド可否）'],['keep','保存期間・削除のタイミング'],['send','撮ったものを相手に送る・共有する'],['delete','後から削除を頼まれたら応じる？']];
+const RATE1 = [
+ {id:'place',title:'場所',note:'使ってもいい場所を答えてください。野外や車内は、人に見られると公然わいせつになり得るので注意。',items:['自分の家','相手の家','ラブホテル','ビジネス・シティホテル','レンタルルーム','発展場','サウナ・ハッテンサウナ','自家用車','野外（人目のない場所）']},
+ {id:'parts',title:'撮影してよい部位',note:'自分が撮られる場合の許可を答えてください。',items:['顔','全身（顔なし）','上半身・乳首','下着姿・下着越し','竿・玉','ケツ・アナル','フェラ・オーラル中','挿入・結合部','射精・中出し後','拘束・SMプレイ中','放尿・その他の体液']},
+ {id:'post',title:'撮影後の投稿',note:'自分が写ったものを投稿してよいか。△は条件をその他欄へ（顔なしなら可、鍵垢のみ など）。',items:['X（公開アカウント）','X（鍵アカウント）','Vero','Instagram（親しい友達・鍵垢）','ゲイ向けアプリのプロフィール・アルバム','有料ファンサイト（OnlyFansなど）','動画サイト・掲示板','個人間の送付（LINE・DMなど）','顔ありでの投稿','アカウント名のタグ付け・言及','投稿前に相手に見せて確認する','継続して投稿する（今回分以外も）']},
+];
+const FREE = [['want','一番やりたいこと・興奮するシチュ'],['someday','いつか試してみたいこと'],['never','絶対にやらないでほしいこと'],['words','言われたい言葉／言われたくない言葉'],['past','過去に嫌だったこと・気をつけてほしいこと'],['aftercare','終わった後にしてほしいこと（くっつく・すぐ帰る等）'],['etc','その他なんでも']];
+
+const STEPS = [{kind:'basics',title:'基本情報・安全'},
+  {kind:'rate1',sec:RATE1[0],title:RATE1[0].title},
+  ...RATE2.map(s=>({kind:'rate2',sec:s,title:s.title})),
+  {kind:'shoot',title:'撮影のルール'},
+  ...RATE1.slice(1).map(s=>({kind:'rate1',sec:s,title:s.title})),
+  {kind:'free',title:'自由記入'}];
+
+const KEY='playkarte-v1';
+let st = {name:'',t:{},r:{},q:{},x:{},m1:1};
+let view='start', step=0, partner=null, pasteErr='', resetArm=false;
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s){const old=!(s.st&&s.st.m1);st=Object.assign(st,s.st||{});
+  if(old){const r=st.r;for(let i=10;i>=3;i--){if(r['kiss'+(i-1)])r['kiss'+i]=r['kiss'+(i-1)];else delete r['kiss'+i]}delete r.kiss2;st.m1=1}
+  view=s.view||'start'; step=s.step||0;}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({st,view:view==='result'?'done':view,step}))}catch(e){}}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rid=(sec,i)=>sec.id+i;
+
+// ---- encode / decode ----
+function packState(s){
+  const r=RATE2.map(sec=>sec.items.map((_,i)=>{const v=s.r[rid(sec,i)]||[0,0];return ''+v[0]+v[1]}).join('')).join('');
+  const q=RATE1.map(sec=>sec.items.map((_,i)=>''+(s.q[rid(sec,i)]||0)).join('')).join('');
+  const t={};Object.entries(s.t).forEach(([k,v])=>{if(v&&v.trim())t[k]=v});
+  const x={};Object.entries(s.x).forEach(([k,v])=>{if(v&&v.trim())x[k]=v});
+  return {v:1,n:s.name,r,q,t,x};
+}
+function unpack(p){
+  const s={name:p.n||'相手',t:p.t||{},x:p.x||{},r:{},q:{}};let k=0;
+  RATE2.forEach(sec=>sec.items.forEach((_,i)=>{s.r[rid(sec,i)]=[+(p.r[k]||0),+(p.r[k+1]||0)];k+=2}));
+  k=0;RATE1.forEach(sec=>sec.items.forEach((_,i)=>{s.q[rid(sec,i)]=+(p.q[k++]||0)}));
+  return s;
+}
+function encode(){const b=new TextEncoder().encode(JSON.stringify(packState(st)));let s='';b.forEach(c=>s+=String.fromCharCode(c));
+  return 'KARTE1.'+btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function decode(code){
+  code=(code||'').replace(/\s+/g,'');const m=code.match(/KARTE1\.([A-Za-z0-9_-]+)/);if(!m)throw new Error('format');
+  let b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
+  const bin=atob(b);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  const p=JSON.parse(new TextDecoder().decode(u));if(p.v!==1||typeof p.r!=='string')throw new Error('format');return unpack(p);
+}
+
+// ---- progress ----
+function stepDone(s){
+  if(s.kind==='rate2')return s.sec.items.every((_,i)=>{const v=st.r[rid(s.sec,i)];return v&&v[0]&&v[1]});
+  if(s.kind==='rate1')return s.sec.items.every((_,i)=>st.q[rid(s.sec,i)]);
+  return false;
+}
+function totalProgress(){let a=0,n=0;
+  RATE2.forEach(sec=>sec.items.forEach((_,i)=>{const v=st.r[rid(sec,i)]||[0,0];n+=2;a+=(v[0]?1:0)+(v[1]?1:0)}));
+  RATE1.forEach(sec=>sec.items.forEach((_,i)=>{n++;if(st.q[rid(sec,i)])a++}));return n?a/n:0;}
+
+// ---- render ----
+function chipRow(key,dirIdx,val){
+  return `<div class="chips" role="radiogroup">${R.map(([v,m,l])=>`<button class="chip v${v}${val===v?' on':''}" data-k="${key}" data-d="${dirIdx}" data-v="${v}" role="radio" aria-checked="${val===v}" aria-label="${l}" title="${l}">${m}</button>`).join('')}</div>`;
+}
+function legend(){return `<div class="legend">${R.map(([v,m,l])=>`<span><i class="dot v${v}">${m}</i>${l}</span>`).join('')}</div>`}
+function selectField(id,label,opts){const cur=st.t[id]||'';
+  return `<div class="field sel"><span>${esc(label)}</span><div class="opts">${opts.map(o=>`<button class="opt${cur===o?' on':''}" data-sel="${id}" data-val="${esc(o)}" aria-pressed="${cur===o}">${esc(o)}</button>`).join('')}</div>
+  <input type="text" id="f-${id}_m" data-t="t" data-id="${id}_m" placeholder="補足（任意）" value="${esc(st.t[id+'_m']||'')}"></div>`}
+function textField(id,label,store,ph){return `<label class="field">${esc(label)}<textarea id="f-${id}" rows="1" data-t="${store}" data-id="${id}" placeholder="${esc(ph||'')}">${esc(st[store][id]||'')}</textarea></label>`}
+
+function renderStart(){
+  $('#bar').hidden=true;
+  const has=Object.keys(st.r).length||st.name;
+  $('#app').innerHTML=`
+  <div class="hero">
+    <span class="tag">ふたりで記入するカウンセリングシート</span>
+    <div class="logo">プレイ<span>カルテ</span></div>
+    <p>会う前にそれぞれが記入して、回答コードを交換するだけ。「やりたい」が重なるプレイと、NGなプレイがひと目でわかります。</p>
+  </div>
+  <div class="card fields">
+    <label class="field">呼ばれたい名前
+      <input type="text" id="nameIn" maxlength="20" placeholder="例：ゆうと" value="${esc(st.name)}"></label>
+    ${legend()}
+    <p class="muted">回答はこの端末のブラウザにだけ保存されます。どこにも送信されず、相手に届くのは自分でコピーして渡したコードだけです。</p>
+    <div class="row">
+      <button class="btn primary" id="go">${has?'続きから記入する':'記入をはじめる'}</button>
+      ${has?`<button class="btn small" id="toDone">回答コード・結果へ</button>`:''}
+    </div>
+  </div>
+  <div class="card fields">
+    <h3 style="font-size:18px">相手から先にコードが届いた？</h3>
+    <p class="muted">自分の記入を終えてから貼り付けると、ふたりの結果が出ます。</p>
+  </div>`;
+  $('#nameIn').oninput=e=>{st.name=e.target.value;save()};
+  $('#go').onclick=()=>{view='fill';save();render();scrollTo(0,0)};
+  if($('#toDone'))$('#toDone').onclick=()=>{view='done';save();render()};
+}
+
+function renderFill(){
+  const s=STEPS[step];
+  let body='';
+  if(s.kind==='basics'){
+    body=`<div class="card fields"><h3 style="font-size:18px">体と安全のこと</h3><p class="muted">選択肢はタップで選択（もう一度押すと解除）。補足欄は任意です。</p>${BASICS.map(([id,l,o])=>o?selectField(id,l,o):textField(id,l,'t')).join('')}</div>
+    <div class="card fields"><h3 style="font-size:18px">セーフワード</h3><p class="muted">合図が出たら、事前の合意よりその場の合図が優先です。</p>${SAFE.map(([id,l])=>textField(id,l,'t')).join('')}</div>`;
+  }else if(s.kind==='rate2'){
+    body=`${s.sec.note?`<div class="note">${esc(s.sec.note)}</div>`:''}
+    <div class="items">${s.sec.items.map((name,i)=>{const k=rid(s.sec,i),v=st.r[k]||[0,0];
+      return `<div class="item"><div class="name">${esc(name)}</div><div class="dirs">
+        <div class="dir"><b>する</b>${chipRow(k,0,v[0])}</div><div class="dir"><b>される</b>${chipRow(k,1,v[1])}</div></div></div>`}).join('')}</div>
+    <div class="card fields">${textField(s.sec.id,'その他（リストにないもの・条件など）','x','自由に書いてください')}</div>`;
+  }else if(s.kind==='rate1'){
+    body=`<div class="note">${esc(s.sec.note)}</div>
+    <div class="items">${s.sec.items.map((name,i)=>{const k=rid(s.sec,i);
+      return `<div class="item"><div class="name">${esc(name)}</div><div class="dir">${chipRow(k,-1,st.q[k]||0)}</div></div>`}).join('')}</div>
+    <div class="card fields">${textField(s.sec.id,'その他・条件（他の投稿先など）','x')}</div>`;
+  }else if(s.kind==='shoot'){
+    body=`<div class="note">撮影OKはあとから取り消せて、削除を頼まれたら消すのが前提です。</div>
+    <div class="card fields">${SHOOT_RULES.map(([id,l])=>textField('sh_'+id,l,'t')).join('')}</div>`;
+  }else{
+    body=`<div class="card fields">${FREE.map(([id,l])=>textField('fr_'+id,l,'t')).join('')}</div>`;
+  }
+  const pct=Math.round(totalProgress()*100);
+  $('#app').innerHTML=`
+  <div class="stepbar">
+    <div class="stephead"><h2>${esc(s.title)}</h2><span class="count">${step+1} / ${STEPS.length}</span></div>
+    <div class="progress" aria-label="全体の進み具合 ${pct}%"><i style="width:${pct}%"></i></div>
+    ${(s.kind==='rate2'||s.kind==='rate1')?legend():''}
+    <div class="stepchips">${STEPS.map((x,i)=>`<button data-step="${i}" class="${i===step?'on':stepDone(x)?'done':''}">${esc(x.title)}</button>`).join('')}</div>
+  </div>${body}`;
+  $('#bar').hidden=false;
+  const last=step===STEPS.length-1;
+  $('#barInner').innerHTML=`<button class="btn" id="prev">${step===0?'トップへ':'戻る'}</button>
+    <button class="btn ${last?'mint':'primary'}" id="next">${last?'記入完了':'次へ'}</button>`;
+  $('#prev').onclick=()=>{if(step===0)view='start';else step--;save();render();scrollTo(0,0)};
+  $('#next').onclick=()=>{if(last)view='done';else step++;save();render();scrollTo(0,0)};
+  const on=document.querySelector('.stepchips .on');if(on)on.scrollIntoView({inline:'center',block:'nearest'});
+  autosize();
+}
+
+function autosize(){document.querySelectorAll('textarea[data-t]').forEach(t=>{t.style.height='auto';t.style.height=(t.scrollHeight+4)+'px'})}
+
+function renderDone(){
+  $('#bar').hidden=true;
+  const code=encode();
+  $('#app').innerHTML=`
+  <div class="hero"><span class="tag">記入おつかれさま</span><h2 style="font-size:clamp(28px,7vw,40px)">コードを交換しよう</h2>
+  <p>自分のコードを相手に送って、相手のコードをここに貼ると、ふたりの結果が出ます。</p></div>
+  <div class="card fields">
+    <h3 style="font-size:18px">${esc(st.name||'あなた')}の回答コード</h3>
+    <textarea class="code" id="myCode" readonly>${code}</textarea>
+    <div class="row"><button class="btn primary small" id="copyMine">コードをコピー</button><span id="copyMsg"></span></div>
+    <p class="muted">LINEやDMで相手に送ってください。相手もこのページを開いて記入すれば、同じように結果が見られます。</p>
+  </div>
+  <div class="card fields">
+    <h3 style="font-size:18px">相手のコードを貼る</h3>
+    <textarea class="code" id="theirCode" placeholder="KARTE1. ではじまるコードを貼り付け"></textarea>
+    ${pasteErr?`<p class="err">${esc(pasteErr)}</p>`:''}
+    <div class="row"><button class="btn mint" id="showRes">ふたりの結果を見る</button></div>
+  </div>
+  <div class="row">
+    <button class="btn small" id="edit">記入を見直す</button>
+    <button class="btn small" id="reset">${resetArm?'もう一度押すと全部消えます':'回答をリセット'}</button>
+  </div>`;
+  $('#copyMine').onclick=()=>copy(code,'#copyMsg','#myCode');
+  $('#showRes').onclick=()=>{try{partner=decode($('#theirCode').value);pasteErr='';view='result';resStage='intro';render();scrollTo(0,0)}
+    catch(e){pasteErr='コードを読み取れませんでした。KARTE1. から最後まで、途中が欠けずにコピーされているか確認してください。';render()}};
+  $('#edit').onclick=()=>{view='fill';step=0;save();render();scrollTo(0,0)};
+  $('#reset').onclick=()=>{if(!resetArm){resetArm=true;render();return}
+    resetArm=false;st={name:'',t:{},r:{},q:{},x:{},m1:1};view='start';step=0;save();render()};
+}
+
+function copy(text,msgSel,fallbackSel){
+  const done=ok=>{const m=$(msgSel);if(m){m.className=ok?'ok':'muted';m.textContent=ok?'コピーしました':'選択したので、長押し or ⌘C でコピーしてください'}};
+  try{navigator.clipboard.writeText(text).then(()=>done(true)).catch(()=>{sel();done(false)})}catch(e){sel();done(false)}
+  function sel(){const t=$(fallbackSel);if(t){t.focus();t.select()}}
+}
+
+// ---- matching ----
+function judge(give,take){
+  if(give===1||take===1)return 'ng';
+  if(!give||!take)return 'talk';
+  if(give>=4&&take>=4)return (give===5||take===5)?'love':'ok';
+  if((give===2&&take>=4)||(take===2&&give>=4)||(give===2&&take===2))return 'try';
+  return 'talk';
+}
+const BUCKETS=[
+  ['love','やりたいが一致','b-love','どちらかが◎で、ふたりともOK以上'],
+  ['ok','どっちもOK','b-ok','ふたりとも○以上'],
+  ['try','チャレンジ候補','b-try','片方が未経験・興味あり。やるなら事前に相談を'],
+  ['talk','要相談','b-talk','△や未回答があるもの。当日までに話しておく'],
+  ['ng','NG','b-ng','どちらかが×。理由は聞かない、説得しない']];
+
+function computeResult(me,them){
+  const A=me.name||'あなた',B=them.name||'相手';
+  const out={love:[],ok:[],try:[],talk:[],ng:[]};
+  RATE2.forEach(sec=>sec.items.forEach((name,i)=>{
+    const k=rid(sec,i),a=me.r[k]||[0,0],b=them.r[k]||[0,0];
+    [[a[0],b[1],A,B],[b[0],a[1],B,A]].forEach(([g,t,from,to])=>{
+      if(!g&&!t)return;
+      out[judge(g,t)].push({cat:sec.title,name,from,to,g,t,smell:sec.id==='smell'});
+    });
+  }));
+  return {A,B,out};
+}
+
+let resTab='play',resBucket='love',resStage='intro';
+function renderIntro(A,B,out,merged){
+  const n=k=>merged[k].length,total=BUCKETS.reduce((s,[k])=>s+n(k),0);
+  const all=BUCKETS.flatMap(([k])=>out[k]),wanted=all.filter(x=>x.g===5||x.t===5);
+  const pct=wanted.length?Math.round(out.love.length/wanted.length*100):0;
+  const [rank,stars,msg]=pct>=80?['S',3,'BEST MATCH!']:pct>=65?['A',3,'GREAT MATCH!']:pct>=50?['B',2,'GOOD MATCH!']:pct>=35?['C',1,'話し合いで伸びるふたり']:['D',1,'じっくり話してみよう'];
+  const both5=[...new Set(out.love.filter(x=>x.g===5&&x.t===5).map(x=>x.name))];
+  const top=(both5.length?both5:[...new Set(out.love.map(x=>x.name))]).slice(0,3);
+  const LBL=[['love','PERFECT','やりたいが一致','#FF6AAB'],['ok','GREAT','どっちもOK','#3BDDB0'],['try','CHALLENGE','チャレンジ候補','#5DB8FF'],['talk','CHECK','要相談','#FFCB55'],['ng','BLOCK','NG','#A99FC2']];
+  $('#app').innerHTML=`
+  <section class="gm" aria-label="ふたりの結果">
+    <div class="gm-top"><span>${esc(A)} × ${esc(B)}</span><span>STAGE 1</span></div>
+    <div class="gm-c"><div class="gm-title">RESULT</div><div class="gm-stars">${'★ '.repeat(stars).trim()}</div></div>
+    <div class="gm-rankrow">
+      <div class="gm-rank" id="gmRank">${rank}</div>
+      <div><div class="gm-lab">やりたい一致度</div><div class="gm-pct"><span id="gmPct">${pct}</span><small>%</small></div><div class="gm-msg">${msg}</div></div>
+    </div>
+    <div class="gm-lines">${LBL.map(([k,en,ja,c])=>`<button class="gm-ln" data-gb="${k}"><span class="gm-k" style="color:${c}">${en}</span><span class="gm-j">${ja}</span><span class="gm-n" data-to="${n(k)}">${n(k)}</span></button>`).join('')}</div>
+    ${top.length?`<div class="gm-top3"><div class="gm-t3h">♥ ${both5.length?'ふたりの◎一致':'やりたいが一致'} TOP${top.length}</div>${top.map(t=>`<span class="gm-pl">${esc(t)}</span>`).join('')}</div>`:''}
+    ${n('try')?`<div class="gm-new">NEW! チャレンジ候補が${n('try')}つ解放されました</div>`:''}
+    <div class="gm-btns"><button class="gm-b" id="gmDetail">詳細を見る</button><button class="gm-b pk" id="gmShare">結果をシェア</button></div>
+    <div class="gm-foot"><span id="resMsg"></span><button class="gm-replay" id="gmReplay">もう一度再生</button></div>
+  </section>
+  <textarea id="resText" class="code" readonly hidden></textarea>
+  <p class="muted">やりたい一致度＝どちらかが◎をつけたプレイのうち、相手もOK以上だった割合（${out.love.length}/${wanted.length}）。NGや要相談の数は影響しません。</p>
+  <div class="row"><button class="btn small" id="back">コード交換に戻る</button></div>`;
+  $('#gmDetail').onclick=()=>{resStage='detail';renderResult();scrollTo(0,0)};
+  $('#gmShare').onclick=()=>{const t=resultText(A,B,out,{pct,rank});const ta=$('#resText');ta.value=t;copy(t,'#resMsg','#resText');ta.hidden=false};
+  $('#gmReplay').onclick=()=>playIntro(pct);
+  $('#back').onclick=()=>{view='done';render();scrollTo(0,0)};
+  document.querySelectorAll('[data-gb]').forEach(b=>b.onclick=()=>{resStage='detail';resTab='play';resBucket=b.dataset.gb;renderResult();scrollTo(0,0)});
+  playIntro(pct);
+}
+function playIntro(pct){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const lines=[...document.querySelectorAll('.gm-ln')],rank=$('#gmRank'),p=$('#gmPct');
+  lines.forEach(l=>{l.classList.add('pre');l.querySelector('.gm-n').textContent='0'});rank.classList.add('pre');p.textContent='0';
+  lines.forEach((l,i)=>setTimeout(()=>{l.classList.remove('pre');const n=l.querySelector('.gm-n'),to=+n.dataset.to;if(!to)return;let c=0;const step=Math.max(1,Math.ceil(to/15));const t=setInterval(()=>{c=Math.min(to,c+step);n.textContent=c;if(c>=to)clearInterval(t)},40)},250+i*260));
+  setTimeout(()=>{let v=0;const t=setInterval(()=>{v=Math.min(pct,v+2);p.textContent=v;if(v>=pct)clearInterval(t)},18)},1650);
+  setTimeout(()=>{rank.classList.remove('pre');burst(rank)},2650);
+}
+
+function group3(sec,me,them){
+  const g={ok:[],talk:[],ng:[]};
+  sec.items.forEach((name,i)=>{const k=rid(sec,i),a=me.q[k]||0,b=them.q[k]||0;
+    if(!a&&!b)return;
+    const key=(a===1||b===1)?'ng':(a>=4&&b>=4)?'ok':'talk';g[key].push({name,a,b})});
+  return g;
+}
+function renderResult(){
+  $('#bar').hidden=true;
+  const {A,B,out}=computeResult(st,partner);
+  // merge both directions of the same item when they land in the same bucket
+  const merged={};BUCKETS.forEach(([k])=>{const m=[];out[k].forEach(x=>{
+    const same=m.find(y=>y.name===x.name&&y.cat===x.cat);if(same){same.both=true}else m.push({...x})});merged[k]=m});
+  if(resStage==='intro'){renderIntro(A,B,out,merged);return}
+  const pill=(x)=>`<button class="pi" data-pi aria-expanded="false">${esc(x.name)}<small>${x.both?'お互い':esc(x.from)+'→'+esc(x.to)}</small><em>${esc(x.from)}${x.smell?'嗅ぐ':'する'}<i class="dot v${x.g}">${MARK[x.g]}</i> ${esc(x.to)}${x.smell?'嗅がれる':'される'}<i class="dot v${x.t}">${MARK[x.t]}</i></em></button>`;
+  const tabs=[['play','プレイ'],['place','場所'],['shoot','撮影・投稿'],['info','ふたりの情報']];
+  const pills3=(g,labels)=>labels.map(([k,l,c])=>g[k].length?`<div class="grp"><div class="grph ${c}">${l}<span>${g[k].length}</span></div><div class="pills">${g[k].map(x=>`<span class="pi">${esc(x.name)}<small>${esc(A)}${MARK[x.a]} ${esc(B)}${MARK[x.b]}</small></span>`).join('')}</div></div>`:'').join('')||'<p class="empty">まだ回答がありません</p>';
+  const fv=(o,id)=>[o.t[id],o.t[id+'_m']].filter(Boolean).join('／');
+  const cmp=(title,rows)=>{const body=rows.filter(([id])=>fv(st,id)||fv(partner,id));if(!body.length)return '';
+    return `<section class="card fields"><h3 class="h3">${title}</h3><div><div class="cmp head"><span>${esc(A)}</span><span>${esc(B)}</span></div>
+    ${body.map(([id,l])=>`<div class="cmp"><span class="lab">${esc(l)}</span><span class="v">${esc(fv(st,id)||'—')}</span><span class="v">${esc(fv(partner,id)||'—')}</span></div>`).join('')}</div></section>`};
+  let body='';
+  if(resTab==='play'){
+    const [k,l,c,sub]=BUCKETS.find(b=>b[0]===resBucket);const list=merged[k];const cats=[...new Set(list.map(x=>x.cat))];
+    body=`<div class="tiles">${BUCKETS.map(([bk,bl,bc])=>`<button class="tile ${bc}${bk===resBucket?' on':''}" data-bucket="${bk}" aria-pressed="${bk===resBucket}"><strong>${merged[bk].length}</strong><span>${bl}</span></button>`).join('')}</div>
+    <section class="card bucket ${c}"><h3>${l}</h3><p class="sub">${sub}</p>
+    ${list.length?cats.map(cat=>`<div class="cat">${esc(cat)}</div><div class="pills">${list.filter(x=>x.cat===cat).map(pill).join('')}</div>`).join(''):'<p class="empty">該当なし</p>'}</section>
+    <p class="muted">項目をタップすると、ふたりの記号が見られます。</p>`;
+  }else if(resTab==='place'){
+    body=`<section class="card fields"><h3 class="h3">場所</h3>${pills3(group3(RATE1[0],st,partner),[['ok','ふたりともOK','b-ok'],['talk','要相談','b-talk'],['ng','NG','b-ng']])}</section>`;
+  }else if(resTab==='shoot'){
+    body=cmp('撮影のルール',SHOOT_RULES.map(([id,l])=>['sh_'+id,l]))+RATE1.slice(1).map(sec=>`<section class="card fields"><h3 class="h3">${esc(sec.title)}</h3>
+      ${pills3(group3(sec,st,partner),[['ok','ふたりともOK','b-ok'],['talk','要相談','b-talk'],['ng','どちらかがNG','b-ng']])}
+      <p class="muted">写る本人が×なら、その人の分はNGです。</p></section>`).join('');
+  }else{
+    const extras=[...RATE2,...RATE1].map(s=>['__x_'+s.id,s.title+' のその他']);
+    const ex=(o)=>{const t={...o.t};[...RATE2,...RATE1].forEach(s=>t['__x_'+s.id]=o.x[s.id]||'');return {t}};
+    const so=st,po=partner;
+    body=cmp('セーフワード',SAFE)+cmp('基本情報・安全',BASICS)+cmp('自由記入',FREE.map(([id,l])=>['fr_'+id,l]));
+    // extras use x store
+    const exRows=extras.filter(([id])=>{const sid=id.slice(4);return so.x[sid]||po.x[sid]});
+    if(exRows.length)body+=`<section class="card fields"><h3 class="h3">その他欄</h3><div><div class="cmp head"><span>${esc(A)}</span><span>${esc(B)}</span></div>
+      ${exRows.map(([id,l])=>{const sid=id.slice(4);return `<div class="cmp"><span class="lab">${esc(l)}</span><span class="v">${esc(so.x[sid]||'—')}</span><span class="v">${esc(po.x[sid]||'—')}</span></div>`}).join('')}</div></section>`;
+    if(!body)body='<p class="empty">記入された情報がありません</p>';
+  }
+  $('#app').innerHTML=`
+  <div class="hero"><span class="tag">ふたりの結果</span>
+    <div class="logo" style="font-size:clamp(30px,8vw,48px)">${esc(A)} <span>×</span> ${esc(B)}</div></div>
+  <div class="stepbar"><div class="restabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-rtab="${k}" aria-selected="${k===resTab}" class="${k===resTab?'on':''}">${l}</button>`).join('')}</div></div>
+  ${body}
+  <div class="row"><button class="btn primary small" id="copyRes">結果をテキストでコピー</button><button class="btn small" id="toIntro">リザルトに戻る</button><button class="btn small" id="back">コード交換に戻る</button><span id="resMsg"></span></div>
+  <textarea id="resText" class="code" readonly hidden></textarea>
+  <p class="muted">結果は当日の気分で変えてOK。セーフワードが出たら、ここに何が書いてあっても止めます。</p>`;
+  $('#copyRes').onclick=()=>{const t=resultText(A,B,out);const ta=$('#resText');ta.value=t;copy(t,'#resMsg','#resText');ta.hidden=false};
+  $('#back').onclick=()=>{view='done';render();scrollTo(0,0)};
+  $('#toIntro').onclick=()=>{resStage='intro';renderResult();scrollTo(0,0)};
+  document.querySelectorAll('[data-rtab]').forEach(b=>b.onclick=()=>{resTab=b.dataset.rtab;renderResult()});
+  document.querySelectorAll('[data-pi]').forEach(b=>b.onclick=()=>{const o=b.classList.toggle('open');b.setAttribute('aria-expanded',o)});
+  document.querySelectorAll('[data-bucket]').forEach(b=>b.onclick=()=>{resBucket=b.dataset.bucket;renderResult()});
+}
+
+function resultText(A,B,out,sc){
+  let s=`【プレイカルテ】${A} × ${B}\n`;if(sc)s+=`ランク ${sc.rank}／やりたい一致度 ${sc.pct}%\n`;
+  BUCKETS.forEach(([k,l])=>{if(!out[k].length)return;s+=`\n■ ${l}（${out[k].length}）\n`;
+    out[k].forEach(x=>s+=`・${x.name}（${x.from}→${x.to} ${MARK[x.g]}${MARK[x.t]}）\n`)});
+  RATE1.forEach(sec=>{s+=`\n■ ${sec.title}（${A}/${B}）\n`;sec.items.forEach((n,i)=>{const k=rid(sec,i);s+=`・${n}：${MARK[st.q[k]||0]} / ${MARK[partner.q[k]||0]}\n`})});
+  const sw=SAFE.map(([id,l])=>`・${l}：${st.t[id]||'—'} / ${partner.t[id]||'—'}`).join('\n');
+  s+=`\n■ セーフワード（${A}/${B}）\n${sw}\n`;
+  return s;
+}
+
+function render(){
+  if(view==='fill')renderFill();else if(view==='done')renderDone();else if(view==='result'&&partner)renderResult();else{view=view==='result'?'done':view;view==='done'?renderDone():renderStart()}
+}
+
+function burst(el){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  el.animate([{transform:'scale(1)'},{transform:'scale(1.45) rotate(-12deg)'},{transform:'scale(1.12) rotate(-6deg)'}],{duration:380,easing:'cubic-bezier(.2,1.6,.4,1)'});
+  const ring=document.createElement('i');ring.className='fx-ring';ring.style.left=cx+'px';ring.style.top=cy+'px';document.body.appendChild(ring);
+  ring.animate([{transform:'translate(-50%,-50%) scale(.4)',opacity:1},{transform:'translate(-50%,-50%) scale(2.6)',opacity:0}],{duration:550,easing:'ease-out'}).onfinish=()=>ring.remove();
+  const glyphs=['♥','★','♥','✦','♥'],cols=['var(--pink)','var(--sun)','var(--mint)','var(--sky)'];
+  for(let i=0;i<14;i++){
+    const p=document.createElement('i');p.className='fx';p.textContent=glyphs[i%glyphs.length];
+    p.style.color=cols[i%cols.length];p.style.left=cx+'px';p.style.top=cy+'px';p.style.fontSize=(12+Math.random()*12)+'px';
+    document.body.appendChild(p);
+    const a=(Math.PI*2*i/14)+Math.random()*.4,dist=40+Math.random()*45,dx=Math.cos(a)*dist,dy=Math.sin(a)*dist;
+    p.animate([{transform:'translate(-50%,-50%) scale(.3)',opacity:1},{transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(1.1) rotate(${(Math.random()-.5)*90}deg)`,opacity:1,offset:.7},{transform:`translate(calc(-50% + ${dx*1.15}px),calc(-50% + ${dy*1.15+14}px)) scale(.8)`,opacity:0}],{duration:700+Math.random()*250,easing:'cubic-bezier(.15,.8,.3,1)'}).onfinish=()=>p.remove();
+  }
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.chip');
+  if(c){const k=c.dataset.k,d=+c.dataset.d,v=+c.dataset.v;
+    if(d<0){st.q[k]=st.q[k]===v?0:v}else{const cur=st.r[k]||[0,0];cur[d]=cur[d]===v?0:v;st.r[k]=cur}
+    if(v===5&&(d<0?st.q[k]:st.r[k][d])===5)burst(c);
+    c.parentElement.querySelectorAll('.chip').forEach(b=>{const on=+b.dataset.v===(d<0?st.q[k]:st.r[k][d]);b.classList.toggle('on',on);b.setAttribute('aria-checked',on)});
+    const p=document.querySelector('.progress i');if(p)p.style.width=Math.round(totalProgress()*100)+'%';
+    const on=document.querySelector('.stepchips .on');if(on&&stepDone(STEPS[step]))on.classList.add('done');
+    save();return}
+  const o=e.target.closest('.opt');
+  if(o){const id=o.dataset.sel,v=o.dataset.val;st.t[id]=st.t[id]===v?'':v;
+    o.parentElement.querySelectorAll('.opt').forEach(b=>{const on=b.dataset.val===st.t[id];b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});save();return}
+  const sb=e.target.closest('[data-step]');
+  if(sb){step=+sb.dataset.step;save();render();scrollTo(0,0)}
+});
+document.addEventListener('input',e=>{
+  const t=e.target;if(t.dataset&&t.dataset.t){st[t.dataset.t][t.dataset.id]=t.value;if(t.tagName==='TEXTAREA'){t.style.height='auto';t.style.height=(t.scrollHeight+4)+'px'}save()}
+});
+render();
+</script>
+</body>
+</html>
